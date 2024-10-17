@@ -1,9 +1,3 @@
-/**
- * Note: Use position fixed according to your needs
- * Desktop navbar is better positioned at the bottom
- * Mobile navbar is better positioned at bottom right.
- **/
-
 "use client";
 
 import { cn } from "../../lib/utils";
@@ -17,7 +11,6 @@ import {
   useTransform,
 } from "framer-motion";
 import { CSSProperties } from "react";
-import Link from "next/link";
 import React, { useRef, useState } from "react";
 
 export const FloatingDock = ({
@@ -25,11 +18,13 @@ export const FloatingDock = ({
   desktopClassName,
   mobileClassName,
   customStyles,
+  onItemClick,
 }: {
-  items: { title: string; icon: React.ReactNode; href: string }[];
+  items: { title: string; icon: React.ReactNode; id: string }[];
   desktopClassName?: string;
   mobileClassName?: string;
   customStyles?: CSSProperties;
+  onItemClick: (id: string) => void;
 }) => {
   return (
     <>
@@ -37,11 +32,13 @@ export const FloatingDock = ({
         items={items}
         className={desktopClassName}
         customStyles={customStyles}
+        onItemClick={onItemClick}
       />
       <FloatingDockMobile
         items={items}
         className={mobileClassName}
         customStyles={customStyles}
+        onItemClick={onItemClick}
       />
     </>
   );
@@ -51,10 +48,12 @@ const FloatingDockMobile = ({
   items,
   className,
   customStyles,
+  onItemClick,
 }: {
-  items: { title: string; icon: React.ReactNode; href: string }[];
+  items: { title: string; icon: React.ReactNode; id: string }[];
   className?: string;
   customStyles?: CSSProperties;
+  onItemClick: (id: string) => void;
 }) => {
   const [open, setOpen] = useState(false);
   return (
@@ -67,7 +66,7 @@ const FloatingDockMobile = ({
           >
             {items.map((item, idx) => (
               <motion.div
-                key={item.title}
+                key={item.id}
                 initial={{ opacity: 0, y: 10 }}
                 animate={{
                   opacity: 1,
@@ -82,13 +81,12 @@ const FloatingDockMobile = ({
                 }}
                 transition={{ delay: (items.length - 1 - idx) * 0.05 }}
               >
-                <Link
-                  href={item.href}
-                  key={item.title}
+                <button
+                  onClick={() => onItemClick(item.id)}
                   className="h-10 w-10 rounded-full bg-gray-50 dark:bg-neutral-900 flex items-center justify-center"
                 >
                   <div className="h-4 w-4">{item.icon}</div>
-                </Link>
+                </button>
               </motion.div>
             ))}
           </motion.div>
@@ -108,10 +106,12 @@ const FloatingDockDesktop = ({
   items,
   className,
   customStyles,
+  onItemClick,
 }: {
-  items: { title: string; icon: React.ReactNode; href: string }[];
+  items: { title: string; icon: React.ReactNode; id: string }[];
   className?: string;
   customStyles?: CSSProperties;
+  onItemClick: (id: string) => void;
 }) => {
   let mouseX = useMotionValue(Infinity);
   return (
@@ -119,7 +119,7 @@ const FloatingDockDesktop = ({
       onMouseMove={(e) => mouseX.set(e.pageX)}
       onMouseLeave={() => mouseX.set(Infinity)}
       className={cn(
-        "mx-auto hidden md:flex h-16 gap-4 items-end  rounded-2xl bg-gray-50 dark:bg-neutral-900 px-4 pb-3",
+        "mx-auto hidden md:flex h-16 gap-4 items-end rounded-2xl bg-gray-50 dark:bg-neutral-900 px-4 pb-3",
         className
       )}
       style={customStyles}
@@ -127,9 +127,10 @@ const FloatingDockDesktop = ({
       {items.map((item) => (
         <IconContainer
           mouseX={mouseX}
-          key={item.title}
+          key={item.id}
           {...item}
           customStyles={customStyles}
+          onClick={() => onItemClick(item.id)}
         />
       ))}
     </motion.div>
@@ -140,20 +141,21 @@ function IconContainer({
   mouseX,
   title,
   icon,
-  href,
+  id,
   customStyles,
+  onClick,
 }: {
   mouseX: MotionValue;
   title: string;
   icon: React.ReactNode;
-  href: string;
+  id: string;
   customStyles?: CSSProperties;
+  onClick: () => void;
 }) {
   let ref = useRef<HTMLDivElement>(null);
 
   let distance = useTransform(mouseX, (val) => {
     let bounds = ref.current?.getBoundingClientRect() ?? { x: 0, width: 0 };
-
     return val - bounds.x - bounds.width / 2;
   });
 
@@ -192,34 +194,33 @@ function IconContainer({
   const [hovered, setHovered] = useState(false);
 
   return (
-    <Link href={href}>
+    <motion.div
+      ref={ref}
+      style={{ width, height, ...customStyles }}
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
+      onClick={onClick}
+      className="aspect-square rounded-full flex items-center justify-center relative cursor-pointer"
+    >
+      <AnimatePresence>
+        {hovered && (
+          <motion.div
+            initial={{ opacity: 0, y: 10, x: "-50%" }}
+            animate={{ opacity: 1, y: 0, x: "-50%" }}
+            exit={{ opacity: 0, y: 2, x: "-50%" }}
+            className="px-2 py-0.5 whitespace-pre rounded-md border absolute left-1/2 -translate-x-1/2 -top-8 w-fit text-xs"
+            style={customStyles}
+          >
+            {title}
+          </motion.div>
+        )}
+      </AnimatePresence>
       <motion.div
-        ref={ref}
-        style={{ width, height, ...customStyles }}
-        onMouseEnter={() => setHovered(true)}
-        onMouseLeave={() => setHovered(false)}
-        className="aspect-square rounded-full flex items-center justify-center relative"
+        style={{ width: widthIcon, height: heightIcon }}
+        className="flex items-center justify-center"
       >
-        <AnimatePresence>
-          {hovered && (
-            <motion.div
-              initial={{ opacity: 0, y: 10, x: "-50%" }}
-              animate={{ opacity: 1, y: 0, x: "-50%" }}
-              exit={{ opacity: 0, y: 2, x: "-50%" }}
-              className="px-2 py-0.5 whitespace-pre rounded-md border absolute left-1/2 -translate-x-1/2 -top-8 w-fit text-xs"
-              style={customStyles}
-            >
-              {title}
-            </motion.div>
-          )}
-        </AnimatePresence>
-        <motion.div
-          style={{ width: widthIcon, height: heightIcon }}
-          className="flex items-center justify-center"
-        >
-          {icon}
-        </motion.div>
+        {icon}
       </motion.div>
-    </Link>
+    </motion.div>
   );
 }

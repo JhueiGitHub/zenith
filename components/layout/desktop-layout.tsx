@@ -1,7 +1,8 @@
 "use client";
 
-import { ReactNode, useState } from "react";
+import { ReactNode, useState, useEffect } from "react";
 import { FloatingDock } from "../ui/floating-dock";
+import { AppWindow } from "../ui/app-window";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   IconHome,
@@ -52,49 +53,47 @@ export const DesktopLayout: React.FC<DesktopLayoutProps> = ({
   children,
 }) => {
   const [isDockVisible, setIsDockVisible] = useState(false);
+  const [openApps, setOpenApps] = useState<string[]>([]);
+  const [desktopSize, setDesktopSize] = useState({ width: 0, height: 0 });
+
+  useEffect(() => {
+    const updateSize = () => {
+      setDesktopSize({
+        width: window.innerWidth,
+        height: window.innerHeight,
+      });
+    };
+    window.addEventListener("resize", updateSize);
+    updateSize();
+    return () => window.removeEventListener("resize", updateSize);
+  }, []);
 
   const dockItems = [
-    {
-      title: "Home",
-      icon: (
-        <IconHome className="h-full w-full text-neutral-500 dark:text-neutral-300" />
-      ),
-      href: "#",
-    },
+    { title: "Home", icon: <IconHome className="h-full w-full" />, id: "home" },
     {
       title: "Terminal",
-      icon: (
-        <IconTerminal2 className="h-full w-full text-neutral-500 dark:text-neutral-300" />
-      ),
-      href: "#",
+      icon: <IconTerminal2 className="h-full w-full" />,
+      id: "terminal",
     },
     {
       title: "New Window",
-      icon: (
-        <IconNewSection className="h-full w-full text-neutral-500 dark:text-neutral-300" />
-      ),
-      href: "#",
+      icon: <IconNewSection className="h-full w-full" />,
+      id: "new-window",
     },
     {
       title: "Flow",
-      icon: (
-        <IconExchange className="h-full w-full text-neutral-500 dark:text-neutral-300" />
-      ),
-      href: "#",
+      icon: <IconExchange className="h-full w-full" />,
+      id: "flow",
     },
     {
       title: "Social",
-      icon: (
-        <IconBrandX className="h-full w-full text-neutral-500 dark:text-neutral-300" />
-      ),
-      href: "#",
+      icon: <IconBrandX className="h-full w-full" />,
+      id: "social",
     },
     {
       title: "GitHub",
-      icon: (
-        <IconBrandGithub className="h-full w-full text-neutral-500 dark:text-neutral-300" />
-      ),
-      href: "#",
+      icon: <IconBrandGithub className="h-full w-full" />,
+      id: "github",
     },
   ];
 
@@ -108,16 +107,40 @@ export const DesktopLayout: React.FC<DesktopLayoutProps> = ({
     color: zenithFlow.tokens.colors.text.secondary,
   };
 
+  const handleAppOpen = (appId: string) => {
+    if (!openApps.includes(appId)) {
+      setOpenApps([...openApps, appId]);
+    }
+  };
+
+  const handleAppClose = (appId: string) => {
+    setOpenApps(openApps.filter((id) => id !== appId));
+  };
+
   return (
     <div
       className="h-full relative overflow-hidden"
       style={{ backgroundColor: zenithFlow.tokens.colors.black }}
       onMouseMove={(e) => {
-        const threshold = window.innerHeight - 50; // 50px from bottom
+        const threshold = window.innerHeight - 50;
         setIsDockVisible(e.clientY > threshold);
       }}
     >
       {children}
+      {openApps.map((appId) => {
+        const app = dockItems.find((item) => item.id === appId);
+        return (
+          <AppWindow
+            key={appId}
+            zenithFlow={zenithFlow}
+            title={app?.title || "Untitled"}
+            isOpen={true}
+            onClose={() => handleAppClose(appId)}
+            onMinimize={() => {}}
+            onMaximize={() => {}}
+          />
+        );
+      })}
       <AnimatePresence>
         {isDockVisible && (
           <motion.div
@@ -134,6 +157,7 @@ export const DesktopLayout: React.FC<DesktopLayoutProps> = ({
               }))}
               desktopClassName="backdrop-blur-md border-2"
               customStyles={dockStyle}
+              onItemClick={handleAppOpen}
             />
           </motion.div>
         )}
